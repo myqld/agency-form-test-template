@@ -3,8 +3,6 @@ lockfileVersion: '9.0'
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
-  onlyBuiltDependencies:
-    - esbuild
 
 importers:
 
@@ -23,8 +21,8 @@ importers:
         specifier: 1.55.1
         version: 1.55.1
       uuid:
-        specifier: ^9.0.1
-        version: 9.0.1
+        specifier: ^14.0.0
+        version: 14.0.0
       zod:
         specifier: ^3.22.4
         version: 3.25.76
@@ -44,9 +42,6 @@ importers:
       dotenv:
         specifier: ^16.3.1
         version: 16.6.1
-      playwright-core:
-        specifier: 1.42.1
-        version: 1.42.1
       tsx:
         specifier: ^4.19.4
         version: 4.20.6
@@ -268,11 +263,6 @@ packages:
   lodash@4.18.1:
     resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
 
-  playwright-core@1.42.1:
-    resolution: {integrity: sha512-mxz6zclokgrke9p1vtdy/COWBH+eOZgYUVVU34C73M+4j4HLlQJHtfcqiqqxpP0o8HhMkflvfbquLX5dg6wlfA==}
-    engines: {node: '>=16'}
-    hasBin: true
-
   playwright-core@1.55.1:
     resolution: {integrity: sha512-Z6Mh9mkwX+zxSlHqdr5AOcJnfp+xUWLCt9uKV18fhzA8eyxUd8NUWzAjxUh55RZKSYwDGX0cfaySdhZJGMoJ+w==}
     engines: {node: '>=18'}
@@ -294,8 +284,8 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
-  uuid@9.0.1:
-    resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+  uuid@14.0.0:
+    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
     hasBin: true
 
   wonka@6.3.5:
@@ -454,8 +444,6 @@ snapshots:
 
   lodash@4.18.1: {}
 
-  playwright-core@1.42.1: {}
-
   playwright-core@1.55.1: {}
 
   playwright@1.55.1:
@@ -475,7 +463,7 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  uuid@9.0.1: {}
+  uuid@14.0.0: {}
 
   wonka@6.3.5: {}
 
