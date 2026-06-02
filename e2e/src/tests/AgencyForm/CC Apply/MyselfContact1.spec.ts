@@ -1,0 +1,338 @@
+import { test, expect, Locator, Page } from '@playwright/test';
+import { AgencyFormPage } from '../../../pages/CC Apply/AgencyForm.page';
+import { BeforeYouStartPage } from '../../../pages/CC Apply/BeforeYouStart.page';
+import { getLoginIdentityForSpec } from '../../test-data/centralizedTestData';
+import { environment } from '../../config/environment';
+
+const failValidation = (num: number): never => {
+  throw new Error(`Validation ${num} - Fail`);
+};
+
+const fillIfVisible = async (locator: Locator, value: string) => {
+  await locator.waitFor({ state: 'visible', timeout: 15000 });
+  await locator.fill(value);
+};
+
+const fillContactForm = async (
+  page: Page,
+  data: {
+    firstName: string;
+    middleName?: string;
+    lastName: string;
+    relationship: string;
+    email: string;
+    phone: string;
+  }
+) => {
+  const contactForm = page.locator('li').filter({
+    has: page.getByRole('button', { name: /save details/i }),
+  }).last();
+
+  await fillIfVisible(contactForm.getByRole('textbox', { name: /^First name\b/i }).first(), data.firstName);
+  if (data.middleName) {
+    const middleName = contactForm.getByRole('textbox', { name: /Middle name/i }).first();
+    if (await middleName.isVisible().catch(() => false)) {
+      await middleName.fill(data.middleName);
+    }
+  }
+  await fillIfVisible(contactForm.getByRole('textbox', { name: /^Last name\b/i }).first(), data.lastName);
+
+  const relationshipGroup = contactForm.getByRole('radiogroup', { name: /Relationship to applicant/i }).first();
+  const relationshipGroupVisible = await relationshipGroup.isVisible().catch(() => false);
+  if (relationshipGroupVisible) {
+    const relationshipOption = relationshipGroup.getByRole('radio', {
+      name: new RegExp(data.relationship, 'i'),
+    }).first();
+    await relationshipOption.check().catch(async () => relationshipOption.click());
+  } else {
+    await fillIfVisible(contactForm.getByLabel(/Relationship to applicant/i).first(), data.relationship);
+  }
+
+  await fillIfVisible(contactForm.getByRole('textbox', { name: /^Email address\b/i }).first(), data.email);
+  await fillIfVisible(contactForm.getByRole('textbox', { name: /^Phone number\b/i }).first(), data.phone);
+  await contactForm.getByRole('button', { name: /save details/i }).click();
+};
+
+test('Myself Contact1', async ({ page }, testInfo) => {
+  test.setTimeout(240000);
+
+  const agencyFormPage = new AgencyFormPage(page);
+  const beforeYouStartPage = new BeforeYouStartPage(page);
+  const bysHeading = page.getByRole('heading', { name: /before you start|what are you trying to do\?/i }).first();
+  const contactDetailsHeading = page.getByRole('heading', { name: /contact details/i });
+  const loginIdentity = getLoginIdentityForSpec('MyselfContact1.spec.ts');
+  const loginEmail = loginIdentity.email;
+  const agencyFormUrl = `${environment.DTP_ROOT_URL || 'https://forms.preprod.beta.my.qld.gov.au'}/companioncardapply/agency-form`;
+
+  const handleDraftFailedModal = async () => {
+    const draftFailedHeading = page.getByRole('heading', { name: /your draft failed to load/i });
+    const visible = await draftFailedHeading.isVisible({ timeout: 2000 }).catch(() => false);
+    if (!visible) return false;
+
+    const backToStart = page.getByRole('button', { name: /back to start/i });
+    await backToStart.click();
+    await page.waitForLoadState('domcontentloaded').catch(() => {});
+    await draftFailedHeading.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+    return true;
+  };
+
+  const waitForBysOrDraft = async (timeoutMs: number): Promise<boolean> => {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const bysVisible = await bysHeading.isVisible({ timeout: 2000 }).catch(() => false);
+      if (bysVisible) {
+        return true;
+      }
+
+      const draftVisible = await beforeYouStartPage.draftDialog.isVisible().catch(() => false);
+      if (draftVisible) {
+        return true;
+      }
+
+      await page.waitForTimeout(1000);
+    }
+
+    return false;
+  };
+
+  const recoverAuthIfNeeded = async (): Promise<boolean> => {
+    const loginHeading = page.getByRole('heading', { name: /login to continue/i });
+    const loginVisible = await loginHeading.isVisible({ timeout: 5000 }).catch(() => false);
+    if (!loginVisible) {
+      return false;
+    }
+
+    await agencyFormPage.loginWithIdentity(loginIdentity.provider, loginEmail);
+
+    try {
+      await agencyFormPage.ensureNoLoadingError().catch(() => {});
+      const reachedBysAfterLogin = await waitForBysOrDraft(180000);
+      if (reachedBysAfterLogin) {
+        return true;
+      }
+
+      await page.goto(agencyFormUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
+      await agencyFormPage.ensureNoLoadingError().catch(() => {});
+      return await waitForBysOrDraft(15000);
+    } catch {
+      await page.goto(agencyFormUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
+      await agencyFormPage.ensureNoLoadingError().catch(() => {});
+      return await waitForBysOrDraft(15000);
+    }
+  };
+
+  const goFromBysToContactDetails = async () => {
+    await handleDraftFailedModal();
+    await beforeYouStartPage.startNewIfDraftExists();
+    await handleDraftFailedModal();
+    await beforeYouStartPage.selectApplyForNewCard();
+    await beforeYouStartPage.clickSaveAndContinue();
+    await handleDraftFailedModal();
+  };
+
+  const ensureBysWithFreshMyIdLogin = async () => {
+    await page.goto(agencyFormUrl, { waitUntil: 'domcontentloaded' });
+    await agencyFormPage.ensureNoLoadingError();
+    await handleDraftFailedModal();
+
+    const alreadyAtBys = await waitForBysOrDraft(8000);
+    if (alreadyAtBys) {
+      return;
+    }
+
+    const recovered = await recoverAuthIfNeeded();
+    await handleDraftFailedModal();
+
+    if (recovered) {
+      const bysAfterRecovery = await waitForBysOrDraft(30000);
+      if (bysAfterRecovery) {
+        return;
+      }
+
+      throw new Error(
+        `Identity login completed but app did not return to Before You Start. Current URL: ${page.url()}.`
+      );
+    }
+
+    // Full login path: do not rely on any saved auth state.
+    await agencyFormPage.loginWithIdentity(loginIdentity.provider, loginEmail, { navigateFromEntry: true });
+    await handleDraftFailedModal();
+
+    const bysVisible = await waitForBysOrDraft(180000);
+    if (!bysVisible) {
+      throw new Error(
+        `Auth session is not valid for MyselfContact1 after full ${loginIdentity.provider} login flow. ` +
+        `Timed out waiting for Before You Start after identity login. Current URL: ${page.url()}.`
+      );
+    }
+  };
+
+  // Stable auth entry: use env/mapped myID email and recover login inline when needed.
+  await ensureBysWithFreshMyIdLogin();
+  await beforeYouStartPage.startNewIfDraftExists();
+  await handleDraftFailedModal();
+
+  // BYS: Apply for a new Card -> Save & Continue
+  await goFromBysToContactDetails();
+
+  // If app bounced to login, recover auth and retry once from BYS.
+  const onContactDetails = await contactDetailsHeading.isVisible({ timeout: 8000 }).catch(() => false);
+  if (!onContactDetails) {
+    const recovered = await recoverAuthIfNeeded();
+    if (recovered) {
+      await goFromBysToContactDetails();
+    }
+  }
+
+  await handleDraftFailedModal();
+
+  // Contact Details default landing check.
+  await expect(contactDetailsHeading).toBeVisible({ timeout: 60000 });
+
+  const loginQuestion = page.getByText('Who has logged in to complete this application today?');
+  if (!(await loginQuestion.isVisible().catch(() => false))) {
+    failValidation(1);
+  }
+
+  const option1 = page.getByRole('radio', { name: /Myself, the person with a disability/i }).first();
+  const option2 = page.getByRole('radio', { name: /A parent, legal guardian, spouse, family member or friend of the person with a disability/i }).first();
+  const option3 = page.getByRole('radio', { name: /A professional support provider, paid carer or other representative/i }).first();
+  if (!(await option1.isVisible().catch(() => false)) || !(await option2.isVisible().catch(() => false)) || !(await option3.isVisible().catch(() => false))) {
+    failValidation(1);
+  }
+
+  // Count by matching the known option labels - exactly 3 must be visible
+  const visibleOptions = [option1, option2, option3];
+  for (const opt of visibleOptions) {
+    if (!(await opt.isVisible().catch(() => false))) failValidation(1);
+  }
+  // Ensure no 4th applicant-type radio exists alongside the known 3
+  const allApplicantRadios = page.getByRole('radio', {
+    name: /Myself.*disability|parent.*legal guardian|professional support provider/i,
+  });
+  const totalApplicantTypeOptions = await allApplicantRadios.count().catch(() => 0);
+  if (totalApplicantTypeOptions !== 3) {
+    failValidation(1);
+  }
+
+  // Select "Myself..." and fill details.
+  await option1.check().catch(async () => option1.click());
+  await fillIfVisible(page.getByLabel(/First name/i).first(), 'Tom');
+  await fillIfVisible(page.getByLabel(/Last name/i).first(), 'Waters');
+  await fillIfVisible(page.getByLabel(/Email/i).first(), 'xyz@gmail.com');
+  await fillIfVisible(page.getByLabel(/Phone number|Mobile phone number/i).first(), '0401975446');
+
+  // Validation 2: Preferred Contact method appears with Email and Phone.
+  const preferredMethodHeading = page.getByText(/Preferred contact method|Which method would you like/i).first();
+  const preferredEmail = page.getByRole('radio', { name: /^Email$/i }).first();
+  const preferredPhone = page.getByRole('radio', { name: /^Phone$/i }).first();
+  if (
+    !(await preferredMethodHeading.isVisible({ timeout: 15000 }).catch(() => false)) ||
+    !(await preferredEmail.isVisible().catch(() => false)) ||
+    !(await preferredPhone.isVisible().catch(() => false))
+  ) {
+    failValidation(2);
+  }
+  await preferredEmail.check().catch(async () => preferredEmail.click());
+
+  // Add Contact 1.
+  await page.getByRole('button', { name: /Add a Contact/i }).click();
+  await fillContactForm(page, {
+    firstName: 'Michael',
+    middleName: 'Arthur',
+    lastName: 'George',
+    relationship: 'Parent',
+    email: 'xyz@gmail.com',
+    phone: '04000000',
+  });
+
+  // Validation 3: Contact 1 saved with Edit and Remove.
+  const contact1Block = page
+    .locator('section, article, div')
+    .filter({ hasText: /Michael/ })
+    .filter({ hasText: /George/ })
+    .first();
+  if (
+    !(await contact1Block.isVisible({ timeout: 15000 }).catch(() => false)) ||
+    !(await page.getByRole('button', { name: /Edit Contact 1/i }).isVisible().catch(() => false)) ||
+    !(await page.getByRole('button', { name: /Remove Contact 1/i }).isVisible().catch(() => false))
+  ) {
+    failValidation(3);
+  }
+
+  // Add Contact 2.
+  await page.getByRole('button', { name: /Add a Contact/i }).click();
+  await fillContactForm(page, {
+    firstName: 'Tessa',
+    lastName: 'Philip',
+    relationship: 'Legal Guardian',
+    email: 'abc@gmail.com',
+    phone: '0413837255',
+  });
+
+  // Validation 4: Contact 2 saved with Edit and Remove.
+  const contact2Block = page
+    .locator('section, article, div')
+    .filter({ hasText: /Tessa/ })
+    .filter({ hasText: /Philip/ })
+    .first();
+  if (
+    !(await contact2Block.isVisible({ timeout: 15000 }).catch(() => false)) ||
+    !(await page.getByRole('button', { name: /Edit Contact 2/i }).isVisible().catch(() => false)) ||
+    !(await page.getByRole('button', { name: /Remove Contact 2/i }).isVisible().catch(() => false))
+  ) {
+    failValidation(4);
+  }
+
+  // Validation 5.1: Remove Contact 1.
+  const removeContact1Button = page.getByRole('button', { name: /Remove Contact 1/i });
+  if (!(await removeContact1Button.isVisible({ timeout: 15000 }).catch(() => false))) {
+    failValidation(5);
+  }
+  await removeContact1Button.click();
+
+  // Validation 5.2: Contact 2 should be updated to Contact 1.
+  const contact2StillVisible = await page.getByRole('button', { name: /Edit Contact 2/i }).isVisible().catch(() => false);
+  if (contact2StillVisible) {
+    failValidation(5);
+  }
+  const updatedContact1Block = page
+    .locator('section, article, div')
+    .filter({ hasText: /Contact 1/ })
+    .filter({ hasText: /Tessa/ })
+    .filter({ hasText: /Philip/ })
+    .first();
+  if (!(await updatedContact1Block.isVisible({ timeout: 15000 }).catch(() => false))) {
+    failValidation(5);
+  }
+
+  // Validation 5.3: Add a Contact button should be visible.
+  const addContactVisible = await page.getByRole('button', { name: /Add a Contact/i }).isVisible().catch(() => false);
+  if (!addContactVisible) {
+    failValidation(5);
+  }
+
+
+  // Unique timestamped screenshot of Contact Details screen.
+  const path = require('path');
+  const fs = require('fs');
+  const screenshotDir = path.resolve(__dirname, '../../../../test-results');
+  if (!fs.existsSync(screenshotDir)) fs.mkdirSync(screenshotDir, { recursive: true });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const screenshotPath = path.join(screenshotDir, `MyselfContact1_ContactDetails_${timestamp}.png`);
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  console.log('Myself Contact1 Contact Details screenshot saved at: ' + screenshotPath);
+
+  // Continue and Validation 6: Must proceed to Applicant details.
+  await agencyFormPage.clickSaveAndContinue();
+  const applicantDetailsHeading = page.getByRole('heading', { name: /applicant details/i }).first();
+  const movedToApplicantDetails = await applicantDetailsHeading.isVisible({ timeout: 60000 }).catch(() => false);
+  if (!movedToApplicantDetails) {
+    failValidation(6);
+  }
+
+  console.log('✅ Test Pass - Conditions are met');
+});
+
+
