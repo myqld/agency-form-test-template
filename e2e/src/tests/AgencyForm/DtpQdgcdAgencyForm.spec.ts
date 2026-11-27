@@ -81,7 +81,7 @@ test.describe.serial("Complete full QGCDG form using Assisted Forms", () => {
             await expect(form.confirmationPage.pageTitle).toBeVisible();
             await expect(form.confirmationPage.referenceNumber).toBeVisible();
             await expect(form.downloadPdfButton).toContainText(/(PDF, ~\d{2}\.\dKB)/);
-            await form.confirmationPage.downloadAndVerifyPdf("QGCDG Test Form", "MQ");
+            await form.confirmationPage.downloadAndVerifyPdf("QGCDG Test Form", "QGCDG");
         });
 
         await test.step("Check queued message", async () => {

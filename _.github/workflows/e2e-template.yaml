@@ -100,6 +100,7 @@ jobs:
           DTP_ROOT_URL: ${{ vars.DTP_ROOT_URL }}
           AF_ROOT_URL: ${{ vars.AF_ROOT_URL }}
           E2E_DTP_FORM_NAME: ${{ vars.E2E_DTP_FORM_NAME }}
+          E2E_AF_TRANSACTION_ID: ${{ vars.E2E_AF_TRANSACTION_ID }}
           TC_SERVICE_BASE_URL: ${{ vars.TC_SERVICE_BASE_URL }}
           TEST_RUNNER_ENV: ${{ vars.TEST_RUNNER_ENV }}
           E2E_TEST_RUNNER_CLIENT_ID: ${{ vars.E2E_TEST_RUNNER_CLIENT_ID }}

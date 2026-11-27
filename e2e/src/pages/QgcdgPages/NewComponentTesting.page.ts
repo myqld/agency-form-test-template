@@ -1,4 +1,4 @@
-import { expect, Locator, Page } from "@playwright/test";
+import { Locator, Page } from "@playwright/test";
 import { AgencyFormPage } from "../AgencyForm.page";
 
 export class NewComponentTestingPage extends AgencyFormPage {

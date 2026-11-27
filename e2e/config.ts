@@ -21,6 +21,7 @@ const Env = z.object({
     AF_ROOT_URL: z.string().url(),
     AF_E2E_TEST_USER_IDS: z.string(),
     AGENCY_NAME: z.string(),
+    E2E_AF_TRANSACTION_ID: z.string(),
 });
 
 const customErrorMap: z.ZodErrorMap = (issue, ctx) => {

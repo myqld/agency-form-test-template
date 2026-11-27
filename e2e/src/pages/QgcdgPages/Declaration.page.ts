@@ -15,13 +15,15 @@ export class DeclarationPage extends AgencyFormPage {
         );
     }
 
-    async fillInDeclarationForm() {
+    async fillInDeclarationForm(isAssistedForms = false) {
         await expect(this.findAgreeCheckbox).not.toBeChecked();
         await this.findAgreeCheckbox.click();
         await expect(this.findAgreeCheckbox).toBeChecked();
-        await expect(this.consentToServiceCheckbox).not.toBeChecked();
-        await this.consentToServiceCheckbox.click();
-        await expect(this.consentToServiceCheckbox).toBeChecked();
+        if (!isAssistedForms) {
+            await expect(this.consentToServiceCheckbox).not.toBeChecked();
+            await this.consentToServiceCheckbox.click();
+            await expect(this.consentToServiceCheckbox).toBeChecked();
+        }
         await expect(this.consentToShareCheckbox).not.toBeChecked();
         await this.consentToShareCheckbox.click();
         await expect(this.consentToShareCheckbox).toBeChecked();

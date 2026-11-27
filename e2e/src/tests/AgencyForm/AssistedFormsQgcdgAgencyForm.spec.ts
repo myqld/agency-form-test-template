@@ -16,13 +16,24 @@ test.describe.serial("Complete full QGCDG form using Assisted Forms", () => {
 
     test.beforeAll(async ({ userAuthenticatedContext }) => {
         page = await userAuthenticatedContext.newPage();
+        await page.context().addInitScript(() => {
+            sessionStorage.setItem("isAssistedForms", "true");
+        });
+
         form = new QGCDGFormPage(page);
         await form.goToQgcdgForm(true);
 
         await page.route("https://www.*.graph.qld.gov.au/graphql", async (route) => {
             if (route.request().postDataJSON().operationName === "MyQLDAgentUpdateServiceRequest") {
                 const response = await route.fetch();
-                const fetchedReferenceNumber = (await response.json()).data.myQLDAgentUpdateServiceRequest.referenceNum;
+                const responseBody = (await response.json()) as {
+                    data?: {
+                        myQLDAgentUpdateServiceRequest?: {
+                            referenceNum?: string;
+                        };
+                    } | null;
+                };
+                const fetchedReferenceNumber = responseBody.data?.myQLDAgentUpdateServiceRequest?.referenceNum;
                 if (fetchedReferenceNumber) {
                     referenceNumber = fetchedReferenceNumber;
                 }
@@ -69,7 +80,7 @@ test.describe.serial("Complete full QGCDG form using Assisted Forms", () => {
         });
 
         await test.step("Complete declaration page", async () => {
-            await form.declarationPage.fillInDeclarationForm();
+            await form.declarationPage.fillInDeclarationForm(true);
             await form.submitForm();
         });
 
@@ -77,7 +88,7 @@ test.describe.serial("Complete full QGCDG form using Assisted Forms", () => {
             await expect(form.confirmationPage.inPageAlertHeader).toBeVisible();
             await expect(form.confirmationPage.referenceNumber).toBeVisible();
             await expect(form.downloadPdfButton).toContainText("PDF");
-            await form.confirmationPage.downloadAndVerifyPdf("QGCDG Test Form", "MQ", true);
+            await form.confirmationPage.downloadAndVerifyPdf(form.AF_TRANSACTION_NAME, "MQAF", true);
         });
 
         await test.step("Check queued message", async () => {

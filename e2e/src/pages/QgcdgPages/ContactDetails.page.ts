@@ -43,7 +43,9 @@ export class ContactDetailsPage extends AgencyFormPage {
 
         // Other Address (EditGrid row)
         this.addAddressButton = page.getByRole("button", { name: "Add an address" });
-        this.addressHistoryAutocomplete = page.getByRole("combobox", { name: "Qld address autocomplete" });
+        this.addressHistoryAutocomplete = page.getByRole("combobox", {
+            name: /Qld address autocomplete|Enter an address/,
+        });
         this.enterAddressManuallyButton = page.getByRole("button", { name: "Enter my address manually" });
         this.startDateGroup = page.getByRole("group", { name: "Start date at this address" });
         this.endDateGroup = page.getByRole("group", { name: /End date at this address/ });

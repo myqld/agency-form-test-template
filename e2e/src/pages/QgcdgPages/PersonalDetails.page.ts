@@ -10,9 +10,9 @@ export class PersonalDetailsPage extends AgencyFormPage {
     readonly checkDriverLicenceRadio: Locator;
     readonly otherNameTextArea: Locator;
     readonly driverLicenceNumberTextField: Locator;
-    readonly driverLicenceDateOfBirthDayInputField: Locator;
-    readonly driverLicenceDateOfBirthMonthInputField: Locator;
-    readonly driverLicenceDateOfBirthYearInputField: Locator;
+    readonly driverLicenceExpiryDayInputField: Locator;
+    readonly driverLicenceExpiryMonthInputField: Locator;
+    readonly driverLicenceExpiryYearInputField: Locator;
 
     constructor(page: Page) {
         super(page);
@@ -30,9 +30,14 @@ export class PersonalDetailsPage extends AgencyFormPage {
         });
         this.otherNameTextArea = page.locator('textarea[name="data[pleaseProvideYourOtherNameS]"]');
         this.driverLicenceNumberTextField = page.getByLabel("Drivers licence number");
-        this.driverLicenceDateOfBirthDayInputField = page.locator("#dateOfExpiry-day");
-        this.driverLicenceDateOfBirthMonthInputField = page.locator("#dateOfExpiry-month");
-        this.driverLicenceDateOfBirthYearInputField = page.locator("#dateOfExpiry-year");
+        const driverLicenceDateOfExpiry = page.getByRole("group", { name: "Date of expiry" });
+        this.driverLicenceExpiryDayInputField = driverLicenceDateOfExpiry.getByRole("spinbutton", { name: "Day" });
+        this.driverLicenceExpiryMonthInputField = driverLicenceDateOfExpiry.getByRole("spinbutton", {
+            name: "Month",
+        });
+        this.driverLicenceExpiryYearInputField = driverLicenceDateOfExpiry.getByRole("spinbutton", {
+            name: "Year",
+        });
     }
 
     async selectTitle() {
@@ -73,8 +78,9 @@ export class PersonalDetailsPage extends AgencyFormPage {
         await this.selectPlaceOfBirth();
         await this.checkDriverLicence(true);
         await this.driverLicenceNumberTextField.fill("00000000000");
-        await this.driverLicenceDateOfBirthDayInputField.fill("01");
-        await this.driverLicenceDateOfBirthMonthInputField.fill("01");
-        await this.driverLicenceDateOfBirthYearInputField.fill("2000");
+        // A "current valid" licence must have a future expiry date
+        await this.driverLicenceExpiryDayInputField.fill("01");
+        await this.driverLicenceExpiryMonthInputField.fill("01");
+        await this.driverLicenceExpiryYearInputField.fill(String(new Date().getFullYear() + 5));
     }
 }

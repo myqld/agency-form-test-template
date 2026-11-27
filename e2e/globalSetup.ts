@@ -2,7 +2,7 @@ import { config } from "./config";
 import { querySubscriptionsAndSubscribe } from "./src/api/subscriber/querySubscriptionsAndSubscribe";
 import { getSubscriberClient } from "./src/api/client/client";
 
-const transactionIds = [config.E2E_DTP_FORM_NAME];
+const transactionIds = [config.E2E_DTP_FORM_NAME, config.E2E_AF_TRANSACTION_ID];
 
 const globalSetup = async () => {
     try {

@@ -14,9 +14,10 @@ import { ConfirmationPage } from "./Confirmation.page";
 export class QGCDGFormPage extends AgencyFormPage {
     readonly stepTitle: Locator;
     prefillPageNumber = 0;
-    TRANSACTION_NAME = config.E2E_DTP_FORM_NAME;
+    TRANSACTION_NAME =  config.E2E_DTP_FORM_NAME;
+    AF_TRANSACTION_NAME = config.E2E_AF_TRANSACTION_ID  ;
     PAGE_URL = `${config.DTP_ROOT_URL}/${this.TRANSACTION_NAME}/agency-form`;
-    AF_PAGE_URL = `${config.AF_ROOT_URL}/${this.TRANSACTION_NAME}/form`;
+    AF_PAGE_URL = `${config.AF_ROOT_URL}/${this.AF_TRANSACTION_NAME}/form`;
     eligibilityPage: EligibilityPage;
     typeOfApplicationPage: ApplicationTypePage;
     personalDetailsPage: PersonalDetailsPage;
